@@ -1,0 +1,1064 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>הזמנות מזומ"ש</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2c6a3d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="הזמנות">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-tap-highlight-color: transparent; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<script src="config.js"></script>
+<script src="remote.js"></script>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Secular+One&display=swap">
+<style>
+/* Layout: one narrow work column; sticky header with role + tabs; fixed order bar at the bottom while ordering */
+:root {
+  --bg: #f1f4ee;
+  --surface: #ffffff;
+  --sunken: #e8ede4;
+  --ink: #1b271e;
+  --muted: #5d6b60;
+  --line: #d6ddd2;
+  --accent: #2c6a3d;
+  --accent-ink: #ffffff;
+  --accent-soft: #dfeee2;
+  --up: #b4372c;
+  --down: #2c6a3d;
+  --s-draft: #6b7280; --s-draft-bg: #eceef0;
+  --s-sent: #1f5fa8;  --s-sent-bg: #e1ecf8;
+  --s-viewed: #9a5b00; --s-viewed-bg: #fbeed5;
+  --s-done: #2c6a3d;  --s-done-bg: #dfeee2;
+  --danger: #b4372c; --danger-bg: #f9e3e0;
+  --shadow: 0 1px 2px rgba(20,40,25,.06), 0 4px 16px rgba(20,40,25,.06);
+  --f-display: "Secular One", "Assistant", "Arial Hebrew", Arial, sans-serif;
+  --f-body: "Assistant", "Arial Hebrew", "Segoe UI", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121813; --surface: #1a221c; --sunken: #232d25; --ink: #e6ede7; --muted: #9aa99d; --line: #2f3b32;
+  --accent: #6fbf85; --accent-ink: #0f1a12; --accent-soft: #24392a; --up: #f08a7e; --down: #6fbf85;
+  --s-draft: #b3b9c1; --s-draft-bg: #2a2f35; --s-sent: #8ab8f0; --s-sent-bg: #1c2b3d;
+  --s-viewed: #f0c06a; --s-viewed-bg: #3a2e18; --s-done: #6fbf85; --s-done-bg: #24392a;
+  --danger: #f08a7e; --danger-bg: #3d2220; --shadow: 0 1px 2px rgba(0,0,0,.4); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #121813; --surface: #1a221c; --sunken: #232d25; --ink: #e6ede7; --muted: #9aa99d; --line: #2f3b32;
+  --accent: #6fbf85; --accent-ink: #0f1a12; --accent-soft: #24392a; --up: #f08a7e; --down: #6fbf85;
+  --s-draft: #b3b9c1; --s-draft-bg: #2a2f35; --s-sent: #8ab8f0; --s-sent-bg: #1c2b3d;
+  --s-viewed: #f0c06a; --s-viewed-bg: #3a2e18; --s-done: #6fbf85; --s-done-bg: #24392a;
+  --danger: #f08a7e; --danger-bg: #3d2220; --shadow: 0 1px 2px rgba(0,0,0,.4); color-scheme: dark; }
+
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; direction: rtl; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+* { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num, td.n, .price { font-variant-numeric: tabular-nums; }
+.wrap { max-width: 960px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+.muted { color: var(--muted); }
+
+/* login */
+.login { min-height: 100vh; display: grid; place-items: center; padding-block: 32px; }
+.login-card { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 28px 24px; box-shadow: var(--shadow); display: grid; gap: 20px; }
+.brand { font-family: var(--f-display); font-size: 30px; line-height: 1.1; color: var(--accent); }
+.brand small { display: block; font-family: var(--f-body); font-size: 15px; color: var(--muted); font-weight: 600; margin-top: 6px; }
+.roles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.role { border: 2px solid var(--line); background: var(--bg); border-radius: 12px; padding: 16px 10px; text-align: center; display: grid; gap: 4px; }
+.role b { font-size: 20px; }
+.role span { font-size: 13px; color: var(--muted); }
+.role[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+label.field { display: grid; gap: 6px; font-weight: 600; font-size: 14px; }
+input.txt, select.txt, textarea.txt { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 10px 12px; width: 100%; min-width: 0; }
+textarea.txt { min-height: 72px; resize: vertical; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 9px 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
+a.btn { text-decoration: none; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+.btn.danger { color: var(--danger); border-color: var(--danger); background: transparent; }
+.btn.danger.armed { background: var(--danger); color: #fff; }
+.btn.small { padding: 5px 10px; font-size: 14px; }
+.btn.big { padding: 13px 18px; font-size: 17px; width: 100%; }
+.btn:disabled { opacity: .5; cursor: default; }
+.err { color: var(--danger); font-weight: 600; font-size: 14px; min-height: 1.2em; }
+
+/* header */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top .wrap { display: grid; gap: 8px; padding-block: 10px 0; }
+.top-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.top-row .brand { font-size: 22px; }
+.who { background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 3px 12px; font-weight: 700; font-size: 14px; }
+.spacer { flex: 1; }
+.pl-info { font-size: 13px; color: var(--muted); }
+.pl-info.stale { color: var(--s-viewed); font-weight: 600; }
+.tabs { display: flex; gap: 4px; overflow-x: auto; }
+.tab { border: 0; background: none; padding: 10px 14px; font-weight: 700; color: var(--muted); border-bottom: 3px solid transparent; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.badge { background: var(--s-sent); color: #fff; border-radius: 999px; font-size: 12px; padding: 0 7px; min-width: 20px; line-height: 20px; text-align: center; }
+.banner { margin-top: 14px; border-radius: 10px; padding: 12px 14px; background: var(--s-viewed-bg); color: var(--s-viewed); font-weight: 600; }
+
+main { padding-block: 16px 140px; display: grid; gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; align-items: end; }
+.section-title { font-family: var(--f-display); font-size: 20px; }
+
+/* new order */
+.tools { display: grid; gap: 10px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--head-h, 96px)); z-index: 3; background: var(--bg); padding-block: 8px; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 14px; white-space: nowrap; font-weight: 600; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.list { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.cat-h { background: var(--sunken); padding: 6px 14px; font-weight: 800; font-size: 13px; letter-spacing: .02em; color: var(--muted); }
+.item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line); }
+.cat-h + .item { border-top: 0; }
+.item.on { background: var(--accent-soft); }
+.item.off { opacity: .55; }
+.item .nm { font-weight: 600; min-width: 0; }
+.item .nm small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.price { text-align: left; white-space: nowrap; font-size: 15px; }
+.price small { color: var(--muted); font-size: 12px; }
+.chg { font-size: 12px; font-weight: 700; margin-inline-start: 4px; }
+.chg.up { color: var(--up); } .chg.down { color: var(--down); }
+.step { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--surface); }
+.step button { border: 0; background: var(--sunken); width: 34px; height: 36px; font-size: 18px; font-weight: 700; }
+.step input { width: 52px; border: 0; text-align: center; height: 36px; background: transparent; font-variant-numeric: tabular-nums; }
+.na { font-size: 13px; color: var(--muted); }
+.empty { padding: 28px 16px; text-align: center; color: var(--muted); }
+.extra-form { display: grid; grid-template-columns: minmax(0, 1fr) 90px 110px auto; gap: 8px; }
+@media (max-width: 560px) { .extra-form { grid-template-columns: 1fr 1fr; } .extra-form input:first-child { grid-column: 1 / -1; } }
+
+.bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 6; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -4px 18px rgba(0,0,0,.08); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.bar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; flex-wrap: wrap; }
+.bar .sum { display: grid; line-height: 1.2; }
+.bar .sum b { font-size: 20px; font-variant-numeric: tabular-nums; }
+
+/* tables */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { font-size: 13px; color: var(--muted); font-weight: 700; background: var(--sunken); }
+td.n, th.n { text-align: left; white-space: nowrap; }
+tr.cat td { background: var(--sunken); font-weight: 800; font-size: 13px; color: var(--muted); }
+tfoot td { font-weight: 800; font-size: 17px; border-bottom: 0; }
+.line-note { display: block; font-size: 13px; color: var(--s-viewed); }
+.review-line { display: grid; grid-template-columns: minmax(0, 1fr) 96px 100px auto; gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.review-line .nm { font-weight: 700; min-width: 0; }
+.review-line .nm small { display: block; color: var(--muted); font-weight: 400; }
+.review-line input.note { grid-column: 1 / -1; }
+@media (max-width: 560px) { .review-line { grid-template-columns: 1fr 1fr; } .review-line .nm { grid-column: 1 / -1; } }
+
+/* orders */
+.orders { display: grid; gap: 10px; }
+.order { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; text-align: right; width: 100%; }
+.order.fresh { border-color: var(--s-sent); box-shadow: 0 0 0 1px var(--s-sent); }
+.order h3 { font-size: 17px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.order .meta { font-size: 14px; color: var(--muted); }
+.order .tot { font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums; }
+.order .acts { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
+.pill { border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.pill.draft { color: var(--s-draft); background: var(--s-draft-bg); }
+.pill.sent { color: var(--s-sent); background: var(--s-sent-bg); }
+.pill.viewed { color: var(--s-viewed); background: var(--s-viewed-bg); }
+.pill.handled { color: var(--s-done); background: var(--s-done-bg); }
+.pill.edited { color: var(--danger); background: var(--danger-bg); }
+.timeline { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; }
+.timeline span b { font-weight: 700; }
+.notes-box { background: var(--s-viewed-bg); color: var(--ink); border-radius: 10px; padding: 10px 12px; white-space: pre-wrap; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 6px 12px; font-weight: 700; font-size: 14px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.row-flex { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* upload */
+.drop { border: 2px dashed var(--line); border-radius: 12px; padding: 22px; text-align: center; display: grid; gap: 8px; justify-items: center; background: var(--bg); }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.stat { background: var(--sunken); border-radius: 9px; padding: 6px 12px; font-size: 14px; }
+.stat b { font-variant-numeric: tabular-nums; }
+
+.toast { position: fixed; z-index: 20; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 10px; font-weight: 700; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
+@media (prefers-reduced-motion: no-preference) { .toast { animation: drop .25s ease-out; } @keyframes drop { from { transform: translate(-50%, -8px); opacity: 0; } } }
+</style>
+
+<div id="app" dir="rtl"></div>
+
+<script>
+// items: [{s, x, y, w}] from pdf.js (x = left edge, y = baseline, PDF units)
+function parsePriceItems(items) {
+  const isNum = s => /^\d+(\.\d+)?$/.test(s.trim());
+  const clean = items.map(i => ({ s: i.s, t: i.s.trim(), x: i.x, y: Math.round(i.y * 2) / 2, w: i.w || 0 })).filter(i => i.t);
+  // date
+  let date = null;
+  for (const i of clean) { const m = i.t.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) { date = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; break; } }
+  // price columns: x positions where many numbers line up
+  const bins = {};
+  for (const i of clean) if (isNum(i.t)) { const b = Math.round((i.x + i.w) / 6); bins[b] = (bins[b] || 0) + 1; }
+  const cand = Object.entries(bins).map(([b, n]) => ({ x: b * 6, n })).sort((a, b) => b.n - a.n);
+  const cols = [];
+  for (const c of cand) { if (c.n < 8) break; if (cols.every(k => Math.abs(k - c.x) > 40)) cols.push(c.x); if (cols.length === 4) break; }
+  cols.sort((a, b) => b - a); // right to left
+  // group rows by y
+  const rows = new Map();
+  for (const i of clean) { let key = [...rows.keys()].find(k => Math.abs(k - i.y) < 2); if (key === undefined) { key = i.y; rows.set(key, []); } rows.get(key).push(i); }
+  const ys = [...rows.keys()].sort((a, b) => b - a);
+  const skip = /^(מחיר|תאור מוצר|תאור\s*מוצר)$/;
+  const cats = cols.map(() => '');
+  const out = [];
+  for (const y of ys) {
+    const row = rows.get(y);
+    cols.forEach((px, ci) => {
+      const left = px - 16, right = ci === 0 ? 1e9 : cols[ci - 1] - 10;
+      const cell = row.filter(i => i.x >= left && i.x < right).sort((a, b) => b.x - a.x);
+      if (!cell.length) return;
+      const priceItem = cell.find(i => isNum(i.t) && Math.abs(i.x + i.w - px) < 14);
+      const rest = cell.filter(i => i !== priceItem);
+      let name = '';
+      let prev = null;
+      for (const i of rest) {
+        const gap = prev ? prev.x - (i.x + i.w) : 0;
+        name += (prev && gap > 1.2 && !/^["'׳״]/.test(i.t) && !/["'׳״]$/.test(name) ? ' ' : '') + i.t;
+        prev = i;
+      }
+      name = name.replace(/\s+/g, ' ').trim();
+      if (!name) return;
+      if (!priceItem) {
+        if (skip.test(name) || /\d{2}\/\d{2}\/\d{4}|\d{2,3}-\d{6,7}/.test(name)) return;
+        name = name.replace(/מחיר/g, '').replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ').trim();
+        if (name) cats[ci] = name;
+        return;
+      }
+      out.push({ n: name, c: cats[ci] || 'כללי', p: parseFloat(priceItem.t), u: guessUnit(name, cats[ci]) });
+    });
+  }
+  // unique names within category
+  const seen = {};
+  for (const it of out) { const k = it.c + '|' + it.n; seen[k] = (seen[k] || 0) + 1; if (seen[k] > 1) it.n += ` (${seen[k]})`; }
+  return { date, cols, items: out };
+}
+function guessUnit(name, cat) {
+  if (/קרטון|קר'|\(\s*\d+\s*יח/.test(name)) return 'קרטון';
+  if (/(^|[\s(])יח/.test(name)) return "יח'";
+  if (/ק"ג|קילו|תפזורת/.test(name)) return 'ק"ג';
+  if (['ירק', 'תבלינים', 'נבטים', 'מהדרין'].includes(cat) && /ארוז|גוש/.test(name)) return "יח'";
+  return 'ק"ג';
+}
+
+</script>
+<script>
+const PASS = null; // checked on the server
+const ROLES = { mz: 'מזומ"ש', buy: 'רכש' };
+const STATUS = { draft: 'טיוטה', sent: 'נשלחה לרכש', viewed: 'נצפתה ע"י רכש', handled: 'טופלה' };
+const UNITS = ['ק"ג', "יח'", 'מארז', 'קרטון', 'ארגז', 'מגש'];
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = n => '₪' + (Math.round(n * 100) / 100).toLocaleString('he-IL', { maximumFractionDigits: 2 });
+const qfmt = n => (Math.round(n * 100) / 100).toLocaleString('he-IL', { maximumFractionDigits: 2 });
+const keyOf = it => it.c + '|' + it.n;
+const norm = s => String(s).replace(/["'׳״]/g, '').toLowerCase();
+const todayISO = (d = 0) => { const t = new Date(); t.setDate(t.getDate() + d); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); };
+const dmy = iso => { if (!iso) return ''; const [y, m, d] = iso.slice(0, 10).split('-'); return `${+d}/${+m}/${y.slice(2)}`; };
+const dayName = iso => iso ? new Date(iso + 'T12:00').toLocaleDateString('he-IL', { weekday: 'long' }) : '';
+const when = iso => iso ? new Date(iso).toLocaleString('he-IL', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+
+const S = {
+  role: window.appHasLogin && !window.appHasLogin() ? null : store.get('mz_role'),
+  tab: null, db: null, dbState: 'loading',
+  catalogs: {}, pricesLoaded: false, orders: [], ordersLoaded: false, plSup: null, pendingSup: null,
+  cart: loadCart(), search: '', cat: 'הכל', view: 'list', openId: null,
+  buyFilter: 'open', plSearch: '', upload: null, armed: null, seen: {},
+  suppliers: null, legacySupplier: null, editSupplier: false, waPending: null, supSel: store.get('mz_sup')
+};
+const seenKey = o => o.status + (o.edited ? '*' : '') + 'S'.repeat(sentList(o).length);
+function suppliers() { return S.suppliers?.list || (S.legacySupplier ? [{ id: 'sup1', ...S.legacySupplier }] : []); }
+function sentList(o) { return o.sentTo || (o.supplierSentAt ? [{ name: o.supplierName || 'ספק', at: o.supplierSentAt }] : []); }
+function curSup() { const l = suppliers(); return l.find(s => s.id === S.supSel) || l[0] || null; }
+function emptyCart() { return { id: null, delivery: todayISO(1), notes: '', lines: {}, extra: [], sup: '' }; }
+function supOptions(selected, emptyLabel) {
+  return `<option value="">${esc(emptyLabel)}</option>` + suppliers().map(s => `<option value="${esc(s.id)}" ${s.id === selected ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
+}
+const supName = id => suppliers().find(s => s.id === id)?.name || '';
+function loadCart() {
+  let c; try { c = JSON.parse(store.get('mz_cart')); } catch (e) { c = null; }
+  c = c || emptyCart();
+  if (!c.sup && Object.keys(c.lines || {}).length) c.sup = 'pini'; // carts from before suppliers had their own lists
+  return c;
+}
+// which supplier's catalog the current screen is about
+function plSup() { return S.plSup || (S.role === 'mz' ? S.cart.sup : '') || suppliers()[0]?.id || 'pini'; }
+function activeSup() { return S.tab === 'prices' ? plSup() : S.cart.sup; }
+function curCat(sup = activeSup()) { return (sup && S.catalogs[sup]) || null; }
+function saveCart() { store.set('mz_cart', JSON.stringify(S.cart)); }
+function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3200); }
+
+/* ---------- data ---------- */
+function priceMap(sup = activeSup()) { const m = {}; (curCat(sup)?.items || []).forEach(it => m[keyOf(it)] = it); return m; }
+function cartLines() {
+  const pm = priceMap(S.cart.sup); const out = [];
+  for (const [k, l] of Object.entries(S.cart.lines)) {
+    if (!(l.q > 0)) continue;
+    const it = pm[k];
+    out.push({ k, n: l.n, c: l.c, u: l.u, q: l.q, note: l.note || '', p: it ? it.p : l.p, missing: !it });
+  }
+  for (const x of S.cart.extra) if (x.q > 0 && x.n) out.push({ k: 'x:' + x.id, n: x.n, c: 'מחוץ למחירון', u: x.u, q: x.q, note: x.note || '', p: null, custom: true });
+  return out;
+}
+const lineTotal = l => (l.p && l.q ? l.p * l.q : 0);
+
+async function connect() {
+  let db = null;
+  try { db = window.claude?.use ? await window.claude.use('db') : null; } catch (e) { db = null; }
+  if (!db) { S.dbState = 'none'; render(); return; }
+  S.db = db; S.dbState = 'ok';
+  const timer = setTimeout(() => { if (!S.pricesLoaded || !S.ordersLoaded) { S.dbState = 'slow'; render(); } }, 10000);
+  db.collection('catalog').onSnapshot(snap => {
+    const c = {}; snap.docs.forEach(d => c[d.id] = d.data()); S.catalogs = c;
+    if (!snap.metadata.fromCache) { S.pricesLoaded = true; if (S.ordersLoaded) clearTimeout(timer); if (S.dbState === 'slow') S.dbState = 'ok'; }
+    onData('prices');
+  }, () => { S.pricesLoaded = true; onData('prices'); });
+  db.collection('orders').orderBy('createdAt', 'desc').limit(500).onSnapshot(snap => {
+    const first = !S.ordersLoaded && !Object.keys(S.seen).length;
+    const next = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!first) notifyChanges(next);
+    next.forEach(o => S.seen[o.id] = seenKey(o));
+    S.orders = next;
+    if (!snap.metadata.fromCache) { S.ordersLoaded = true; if (S.pricesLoaded) clearTimeout(timer); if (S.dbState === 'slow') S.dbState = 'ok'; }
+    onData('orders');
+  }, () => { S.ordersLoaded = true; onData('orders'); });
+  const supChanged = () => {
+    if (S.role === 'buy' && S.tab === 'orders' && !S.editSupplier) renderMain();
+    const sel = $('#cartSup'); if (sel) sel.innerHTML = supOptions(S.cart.sup, 'בחירת ספק');
+  };
+  db.doc('settings/suppliers').onSnapshot(snap => { S.suppliers = snap.exists ? snap.data() : null; supChanged(); }, () => {});
+  db.doc('settings/supplier').onSnapshot(snap => { S.legacySupplier = snap.exists ? snap.data() : null; supChanged(); }, () => {});
+}
+function notifyChanges(next) {
+  for (const o of next) {
+    const was = S.seen[o.id]; const now = seenKey(o);
+    if (was === now) continue;
+    const sl = sentList(o);
+    if (S.role === 'mz' && was && sl.length > (was.match(/S/g) || []).length) { toast(`הזמנה ${o.num} נשלחה ל${sl[sl.length - 1].name}`); continue; }
+    if (S.role === 'buy') {
+      if (o.status === 'sent' && (!was || was.startsWith('draft'))) toast(`הזמנה חדשה ${o.num}${o.supplierName ? ` ל${o.supplierName}` : ''} לאספקה ב-${dmy(o.delivery)}`);
+      else if (o.status === 'sent' && o.edited) toast(`הזמנה ${o.num} עודכנה ע"י מזומ"ש`);
+    } else if (S.role === 'mz' && was) {
+      if (o.status === 'viewed' && !was.startsWith('viewed')) toast(`רכש צפה בהזמנה ${o.num}`);
+      if (o.status === 'handled' && !was.startsWith('handled')) toast(`רכש סימן את הזמנה ${o.num} כטופלה`);
+    }
+  }
+}
+function onData(kind) {
+  if (!S.role) return;
+  renderHeader();
+  if (kind === 'prices' && S.tab === 'new' && S.view === 'list') { renderList(); renderBar(); return; }
+  if (kind === 'orders' && S.tab === 'new') { renderBar(); return; }
+  if (kind === 'prices' && S.tab === 'prices' && S.upload) return;
+  renderMain();
+}
+async function write(fn, okMsg) {
+  if (!S.db) { toast('אין חיבור לנתונים. פתחו את הקישור ב-claude.ai'); return false; }
+  try { await fn(S.db); if (okMsg) toast(okMsg); return true; }
+  catch (e) {
+    const m = e?.code === 'invalid_argument' ? 'אין הרשאת עריכה. בקשו מבעל הדף הרשאת "Contributor"'
+      : e?.code === 'quota_exceeded' ? 'נגמר המקום במסד הנתונים. מחקו טיוטות ישנות' : 'השמירה נכשלה. נסו שוב';
+    toast(m); return false;
+  }
+}
+
+/* ---------- shell ---------- */
+function render() {
+  const app = $('#app');
+  if (!S.role) { app.innerHTML = loginHTML(); return; }
+  const tabs = S.role === 'mz' ? [['new', S.cart.id ? 'עריכת הזמנה' : 'הזמנה חדשה'], ['mine', 'ההזמנות שלי'], ['prices', 'מחירון']] : [['orders', 'הזמנות'], ['prices', 'מחירון']];
+  if (!S.tab || !tabs.some(t => t[0] === S.tab)) S.tab = tabs[0][0];
+  app.innerHTML = `<header class="top"><div class="wrap"><div class="top-row">
+      <span class="brand">הזמנות ירקות</span><span class="who">${ROLES[S.role]}</span><span class="spacer"></span>
+      <span id="plinfo" class="pl-info"></span>
+      <button class="btn ghost small" data-act="logout">יציאה</button></div>
+      <nav class="tabs" role="tablist">${tabs.map(([k, l]) => `<button class="tab" role="tab" data-tab="${k}" aria-selected="${S.tab === k}">${l}<span class="badge" data-badge="${k}" hidden></span></button>`).join('')}</nav>
+    </div></header>
+    <div class="wrap"><div id="dbnote"></div><main id="main"></main></div><div id="bar"></div>`;
+  renderHeader(); renderMain();
+}
+function renderHeader() {
+  const info = $('#plinfo'); if (!info) return;
+  const d = curCat()?.date; const sn = supName(activeSup());
+  info.textContent = !sn ? '' : d ? `מחירון ${sn} ${dmy(d)} · ${dayName(d)}` : (S.pricesLoaded ? `אין מחירון ל${sn}` : '');
+  info.className = 'pl-info' + (d && d < todayISO(-1) ? ' stale' : '');
+  const nb = $('[data-badge="orders"]');
+  if (nb) { const n = S.orders.filter(o => o.status === 'sent').length; nb.hidden = !n; nb.textContent = n; }
+  const mb = $('[data-badge="new"]');
+  if (mb) { const n = cartLines().length; mb.hidden = !n; mb.textContent = n; }
+  const note = $('#dbnote');
+  if (note) note.innerHTML = S.dbState === 'none' ? `<div class="banner">אין חיבור לנתונים המשותפים. פתחו את הקישור לדף ב-claude.ai (עם המשתמש של הארגון) כדי לראות ולשלוח הזמנות.</div>`
+    : S.dbState === 'slow' ? `<div class="banner">הנתונים עדיין לא נטענו. ייתכן שהחיבור איטי, והמידע המוצג לא עדכני.</div>` : '';
+  const top = $('.top'); if (top) document.documentElement.style.setProperty('--head-h', top.offsetHeight + 'px');
+}
+function renderMain() {
+  const m = $('#main'); if (!m) return;
+  $('#bar').innerHTML = '';
+  if (S.tab === 'new') return renderNew();
+  if (S.tab === 'mine' || S.tab === 'orders') return renderOrders();
+  if (S.tab === 'prices') return renderPrices();
+}
+
+function loginHTML() {
+  const sel = S.pickRole || 'mz';
+  return `<div class="wrap login"><form class="login-card" id="loginForm">
+    <div class="brand">הזמנות ירקות<small>מערכת פנימית · מזומ"ש ורכש</small></div>
+    <div class="roles">
+      <button type="button" class="role" data-role="mz" aria-pressed="${sel === 'mz'}"><b>מזומ"ש</b><span>בונים ושולחים הזמנות</span></button>
+      <button type="button" class="role" data-role="buy" aria-pressed="${sel === 'buy'}"><b>רכש</b><span>מקבלים הזמנות ומעלים מחירון</span></button>
+    </div>
+    <label class="field">סיסמה<input class="txt" id="pw" type="password" inputmode="numeric" autocomplete="current-password"></label>
+    <div class="err" id="pwErr"></div>
+    <button class="btn primary big" type="submit">כניסה</button>
+  </form></div>`;
+}
+
+/* ---------- new order ---------- */
+function renderNew() {
+  if (S.view === 'review') return renderReview();
+  const c = S.cart;
+  $('#main').innerHTML = `
+    <div class="card grid2">
+      <label class="field">תאריך אספקה<input class="txt" type="date" id="delivery" value="${esc(c.delivery)}"></label>
+      <label class="field">ספק<select class="txt" id="cartSup">${supOptions(c.sup, 'בחירת ספק')}</select></label>
+      <div class="muted" id="deliveryDay">${c.id ? `עורכים את הזמנה ${esc((S.orders.find(o => o.id === c.id) || {}).num || '')} · ` : ''}${esc(dayName(c.delivery))}</div>
+    </div>
+    <div id="supSwitch">${supSwitchHTML()}</div>
+    <div class="tools">
+      <input class="txt" id="q" type="search" placeholder="חיפוש פריט: עגבניה, נענע, שרי…" value="${esc(S.search)}" autocomplete="off">
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="list" id="list"></div>
+    <div class="card" style="display:grid;gap:10px">
+      <div style="font-weight:700">פריט שלא במחירון</div>
+      <form class="extra-form" id="extraForm">
+        <input class="txt" id="exN" placeholder="שם הפריט" required>
+        <input class="txt" id="exQ" inputmode="decimal" placeholder="כמות" required>
+        <select class="txt" id="exU">${UNITS.map(u => `<option>${esc(u)}</option>`).join('')}</select>
+        <button class="btn" type="submit">הוספה</button>
+      </form>
+    </div>`;
+  renderList(); renderBar();
+}
+function renderList() {
+  const list = $('#list'); if (!list) return;
+  const items = curCat()?.items || [];
+  const cats = [...new Set(items.map(i => i.c))];
+  const inCart = cartLines().length;
+  $('#chips').innerHTML = ['הכל', 'בהזמנה', ...cats].map(cn => `<button class="chip" data-cat="${esc(cn)}" aria-pressed="${S.cat === cn}">${esc(cn)}${cn === 'בהזמנה' ? ` (${inCart})` : ''}</button>`).join('');
+  if (!items.length) {
+    const sn = supName(S.cart.sup);
+    list.innerHTML = `<div class="empty">${!S.cart.sup ? 'בחרו ספק למעלה כדי לראות את המוצרים שלו.'
+      : !(S.pricesLoaded || S.dbState === 'none') ? 'טוען את המוצרים…'
+      : `לספק ${esc(sn)} עוד אין מוצרים במערכת. אפשר להוסיף פריטים ידנית למטה, או לבקש מרכש להעלות את המחירון שלו.`}</div>`;
+    return;
+  }
+  const q = norm(S.search.trim());
+  const shown = items.filter(it => {
+    const k = keyOf(it);
+    if (S.cat === 'בהזמנה') return S.cart.lines[k]?.q > 0;
+    if (S.cat !== 'הכל' && it.c !== S.cat) return false;
+    return !q || norm(it.n).includes(q) || norm(it.c).includes(q);
+  });
+  if (!shown.length) { list.innerHTML = `<div class="empty">לא נמצא פריט בשם "${esc(S.search)}". אפשר להוסיף אותו למטה כפריט שלא במחירון.</div>`; return; }
+  let html = '', last = null;
+  for (const it of shown) {
+    if (it.c !== last) { html += `<div class="cat-h">${esc(it.c)}</div>`; last = it.c; }
+    html += itemRow(it);
+  }
+  list.innerHTML = html;
+}
+function supSwitchHTML() {
+  if (!S.pendingSup) return '';
+  return `<div class="card row-flex" style="border-color:var(--s-viewed)"><b>לכל ספק מוצרים משלו. להחליף ל${esc(supName(S.pendingSup))} ולהתחיל את ההזמנה מחדש?</b><span class="spacer"></span>
+    <button class="btn small danger armed" data-act="supSwitchYes">כן, להחליף ולמחוק את הפריטים</button><button class="btn small" data-act="supSwitchNo">ביטול</button></div>`;
+}
+function chgHTML(it) {
+  if (it.pp == null || it.pp === it.p) return '';
+  return it.p > it.pp ? `<span class="chg up" title="היה ${it.pp}">▲</span>` : `<span class="chg down" title="היה ${it.pp}">▼</span>`;
+}
+function itemRow(it) {
+  const k = keyOf(it); const l = S.cart.lines[k]; const q = l?.q || 0;
+  const off = it.p === 0;
+  return `<div class="item${q > 0 ? ' on' : ''}${off ? ' off' : ''}" data-row="${esc(k)}">
+    <div class="nm">${esc(it.n)}</div>
+    <div class="price">${off ? '<span class="na">אין במלאי</span>' : it.p > 0 ? `${money(it.p)}${chgHTML(it)} <small>/${esc(it.u)}</small>` : `<span class="na">ללא מחיר</span> <small>/${esc(it.u)}</small>`}</div>
+    <div class="step"><button type="button" data-act="inc" data-k="${esc(k)}" aria-label="הוספה">+</button><input data-qty="${esc(k)}" inputmode="decimal" value="${q ? qfmt(q) : ''}" placeholder="0" aria-label="כמות ${esc(it.n)}"><button type="button" data-act="dec" data-k="${esc(k)}" aria-label="הפחתה">−</button></div>
+  </div>`;
+}
+function setQty(k, q, fromInput) {
+  q = Math.max(0, Math.round((+q || 0) * 100) / 100);
+  const it = priceMap(S.cart.sup)[k];
+  if (q > 0) {
+    const prev = S.cart.lines[k] || {};
+    S.cart.lines[k] = { n: it?.n || prev.n, c: it?.c || prev.c, p: it?.p ?? prev.p, u: prev.u || it?.u || 'ק"ג', q, note: prev.note || '' };
+  } else delete S.cart.lines[k];
+  saveCart();
+  const row = document.querySelector(`[data-row="${CSS.escape(k)}"]`);
+  if (row) { row.classList.toggle('on', q > 0); if (!fromInput) row.querySelector('input').value = q ? qfmt(q) : ''; }
+  renderBar(); renderHeader();
+  const chip = document.querySelector('[data-cat="בהזמנה"]'); if (chip) chip.textContent = `בהזמנה (${cartLines().length})`;
+}
+function renderBar() {
+  const bar = $('#bar'); if (!bar || S.tab !== 'new') return;
+  const lines = cartLines();
+  const total = lines.reduce((s, l) => s + lineTotal(l), 0);
+  const review = S.view === 'review';
+  bar.innerHTML = `<div class="bar"><div class="wrap">
+    <div class="sum"><span class="muted">${lines.length} פריטים · עלות משוערת</span><b>${money(total)}</b></div>
+    <span class="spacer"></span>
+    ${review ? `<button class="btn" data-act="back">חזרה לפריטים</button><button class="btn" data-act="saveDraft" ${lines.length ? '' : 'disabled'}>שמירת טיוטה</button><button class="btn primary" data-act="send" ${lines.length ? '' : 'disabled'}>שליחה לרכש</button>`
+      : `${lines.length ? '<button class="btn ghost" data-act="clear">ניקוי</button>' : ''}<button class="btn primary" data-act="review" ${lines.length ? '' : 'disabled'}>לסיכום ושליחה</button>`}
+  </div></div>`;
+}
+function renderReview() {
+  const lines = cartLines(); const c = S.cart;
+  const total = lines.reduce((s, l) => s + lineTotal(l), 0);
+  const unitSel = (l) => `<select class="txt" data-unit="${esc(l.k)}">${[...new Set([l.u, ...UNITS])].map(u => `<option ${u === l.u ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select>`;
+  $('#main').innerHTML = `
+    <div class="card" style="display:grid;gap:4px">
+      <div class="section-title">סיכום הזמנה לאספקה ב-${esc(dmy(c.delivery))} · ${esc(dayName(c.delivery))}</div>
+      <div class="muted">${lines.length} פריטים · עלות משוערת ${money(total)} לפי מחירון ${esc(dmy(curCat()?.date))}</div>
+      <label class="field" style="max-width:280px;margin-top:6px">ספק<select class="txt" id="cartSup">${supOptions(c.sup, 'בחירת ספק')}</select></label>
+    </div>
+    <div class="card">${lines.map(l => `<div class="review-line">
+        <div class="nm">${esc(l.n)}<small>${esc(l.c)} · ${l.p ? `${money(l.p)} ל${esc(l.u)} · ${money(lineTotal(l))}` : 'ללא מחיר'}${l.missing ? ' · לא במחירון הנוכחי' : ''}</small></div>
+        <input class="txt" inputmode="decimal" data-rq="${esc(l.k)}" value="${qfmt(l.q)}" aria-label="כמות">
+        ${unitSel(l)}
+        <button class="btn small danger" data-act="rm" data-k="${esc(l.k)}">הסרה</button>
+        <input class="txt note" data-note="${esc(l.k)}" value="${esc(l.note)}" placeholder="הערה לפריט (לא חובה)">
+      </div>`).join('') || '<div class="empty">אין פריטים בהזמנה</div>'}</div>
+    <div class="card"><label class="field">הערות להזמנה<textarea class="txt" id="orderNotes" placeholder="למשל: לספק עד 07:00, לשים בקירור 2">${esc(c.notes)}</textarea></label></div>`;
+  renderBar();
+}
+function lineRef(k) { return k.startsWith('x:') ? S.cart.extra.find(x => 'x:' + x.id === k) : S.cart.lines[k]; }
+
+async function submitOrder(asDraft) {
+  const lines = cartLines(); if (!lines.length) return;
+  const now = new Date().toISOString();
+  const ex = S.cart.id ? S.orders.find(o => o.id === S.cart.id) : null;
+  if (ex && ex.status === 'handled') { toast('ההזמנה כבר טופלה ע"י רכש ולא ניתן לשנות אותה. שכפלו אותה להזמנה חדשה'); return; }
+  const body = {
+    num: ex?.num || makeNum(), createdAt: ex?.createdAt || now, updatedAt: now,
+    delivery: S.cart.delivery, notes: S.cart.notes || '', priceDate: curCat()?.date || null,
+    supplierId: S.cart.sup || null, supplierName: supName(S.cart.sup) || null,
+    lines: lines.map(l => ({ n: l.n, c: l.c, u: l.u, q: l.q, p: l.p ?? null, note: l.note || '', ...(l.custom ? { custom: true } : {}) })),
+    total: Math.round(lines.reduce((s, l) => s + lineTotal(l), 0) * 100) / 100,
+    status: asDraft ? 'draft' : 'sent',
+    sentAt: asDraft ? (ex?.sentAt || null) : (ex?.sentAt || now),
+    viewedAt: ex?.viewedAt || null, handledAt: null,
+    edited: !asDraft && !!(ex && ex.viewedAt)
+  };
+  if (!asDraft && ex?.sentAt) body.resentAt = now;
+  const ok = await write(db => (S.cart.id ? db.doc('orders/' + S.cart.id) : db.collection('orders').doc()).set(body),
+    asDraft ? `טיוטה ${body.num} נשמרה` : `הזמנה ${body.num} נשלחה לרכש`);
+  if (!ok) return;
+  S.cart = emptyCart(); saveCart(); S.view = 'list'; S.search = ''; S.cat = 'הכל'; S.tab = 'mine'; render();
+}
+function makeNum() { const d = new Date(); return `${d.getDate()}${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`; }
+function loadOrderToCart(o, asCopy) {
+  const pm = priceMap(o.supplierId || 'pini'); const cart = emptyCart(); let missing = 0;
+  if (!asCopy) { cart.id = o.id; cart.delivery = o.delivery; }
+  cart.notes = o.notes || ''; cart.sup = o.supplierId || 'pini';
+  for (const l of o.lines || []) {
+    if (l.custom) { cart.extra.push({ id: Math.random().toString(36).slice(2, 8), n: l.n, q: l.q, u: l.u, note: l.note || '' }); continue; }
+    const k = l.c + '|' + l.n; if (!pm[k]) missing++;
+    cart.lines[k] = { n: l.n, c: l.c, p: pm[k]?.p ?? l.p, u: l.u, q: l.q, note: l.note || '' };
+  }
+  S.cart = cart; saveCart(); S.tab = 'new'; S.view = 'review'; render();
+  if (missing) toast(`${missing} פריטים לא נמצאו במחירון הנוכחי. נשאר להם המחיר הקודם`);
+}
+
+/* ---------- orders ---------- */
+function pill(o) {
+  const sl = sentList(o);
+  return `${sl.length && o.status === 'handled' ? '' : `<span class="pill ${o.status}">${STATUS[o.status] || o.status}</span>`}${sl.length ? `<span class="pill handled">נשלחה ל${esc([...new Set(sl.map(s => s.name))].join(', '))}</span>` : ''}${o.edited ? '<span class="pill edited">עודכנה אחרי צפייה</span>' : ''}`;
+}
+function waNumber(p) { let d = String(p || '').replace(/\D/g, ''); if (d.startsWith('0')) d = '972' + d.slice(1); return d; }
+function supplierText(o, sup) {
+  const name = sup?.name?.trim();
+  return (name ? `שלום ${name},\n` : '') + orderText(o);
+}
+function waLink(o, sup) { return `https://wa.me/${waNumber(sup?.phone)}?text=${encodeURIComponent(supplierText(o, sup))}`; }
+function supplierForm(s) {
+  return `<form id="supplierForm" data-id="${esc(s.id || 'new')}" style="display:grid;gap:10px;padding:10px 0;border-top:1px solid var(--line)">
+      <div class="grid2">
+        <label class="field">שם הספק / איש קשר<input class="txt" id="supName" value="${esc(s.name || '')}" placeholder="למשל: פיני" required></label>
+        <label class="field">מספר וואטסאפ<input class="txt" id="supPhone" inputmode="tel" dir="ltr" value="${esc(s.phone || '')}" placeholder="050-0000000"></label>
+      </div>
+      <div class="row-flex"><button class="btn primary small" type="submit">שמירה</button><button class="btn small" type="button" data-act="cancelSupplier">ביטול</button></div>
+    </form>`;
+}
+function supplierCardHTML() {
+  const list = suppliers(); const ed = S.editSupplier;
+  const rows = list.map(s => ed === s.id ? supplierForm(s) : `<div class="row-flex" style="padding:8px 0;border-top:1px solid var(--line)">
+      <b>${esc(s.name)}</b><span class="muted" dir="ltr">${s.phone ? esc(s.phone) : ''}</span>${s.phone ? '' : '<span class="pill viewed">אין מספר</span>'}
+      <span class="spacer"></span><button class="btn small" data-act="editSupplier" data-id="${esc(s.id)}">עריכה</button>
+      <button class="btn small danger${S.armed === 'sup:' + s.id ? ' armed' : ''}" data-act="delSupplier" data-id="${esc(s.id)}">${S.armed === 'sup:' + s.id ? 'למחוק?' : 'מחיקה'}</button></div>`).join('');
+  return `<details class="card" id="supBox" ${ed || !list.length ? 'open' : ''}>
+      <summary style="cursor:pointer;font-weight:700">ספקים לשליחה בוואטסאפ (${list.length})</summary>
+      <div style="display:grid;margin-top:8px">${rows}${ed === 'new' ? supplierForm({}) : ''}</div>
+      ${ed === 'new' ? '' : '<div style="margin-top:8px"><button class="btn small" data-act="editSupplier" data-id="new">+ הוספת ספק</button></div>'}
+    </details>`;
+}
+async function saveSuppliers(list, msg) {
+  const ok = await write(db => db.doc('settings/suppliers').set({ list }), msg);
+  if (ok) { S.suppliers = { list }; S.editSupplier = false; renderMain(); }
+}
+function renderOrders() {
+  if (S.openId) return renderOrderDetail();
+  const buy = S.role === 'buy';
+  let list = S.orders.filter(o => !buy || o.status !== 'draft');
+  if (buy) {
+    if (S.buyFilter === 'open') list = list.filter(o => o.status !== 'handled');
+    if (S.buyFilter === 'done') list = list.filter(o => o.status === 'handled');
+    list.sort((a, b) => (a.status === 'sent' ? 0 : 1) - (b.status === 'sent' ? 0 : 1) || String(a.delivery).localeCompare(String(b.delivery)));
+  }
+  S.listShown = list.map(o => o.id);
+  const head = buy ? `<div class="row-flex"><div class="section-title">הזמנות ממזומ"ש</div><span class="spacer"></span>
+      ${list.length ? `<button class="btn small" data-act="xlsxAll">ייצוא הרשימה לאקסל</button>` : ''}
+      <div class="seg">${[['open', 'פתוחות'], ['done', 'טופלו'], ['all', 'הכל']].map(([k, l]) => `<button data-filter="${k}" aria-pressed="${S.buyFilter === k}">${l}</button>`).join('')}</div></div>`
+    : `<div class="row-flex"><div class="section-title">ההזמנות שלי</div><span class="spacer"></span><button class="btn primary small" data-act="newOrder">הזמנה חדשה</button></div>`;
+  const empty = !S.ordersLoaded && S.dbState !== 'none' ? 'טוען הזמנות…'
+    : buy ? (S.buyFilter === 'open' ? 'אין הזמנות פתוחות. הזמנה חדשה ממזומ"ש תופיע כאן מיד כשתישלח.' : 'אין הזמנות להצגה.')
+    : 'עדיין לא נשלחו הזמנות. התחילו בלשונית "הזמנה חדשה".';
+  $('#main').innerHTML = (buy ? supplierCardHTML() : '') + head + `<div class="orders">${list.map(o => orderCard(o)).join('') || `<div class="card empty">${empty}</div>`}</div>`;
+}
+function orderCard(o) {
+  const buy = S.role === 'buy';
+  const acts = buy ? '' : `<div class="acts">
+      <button class="btn small" data-act="open" data-id="${o.id}">צפייה</button>
+      ${o.status !== 'handled' ? `<button class="btn small" data-act="edit" data-id="${o.id}">עריכה</button>` : ''}
+      <button class="btn small" data-act="copy" data-id="${o.id}">שכפול להזמנה חדשה</button>
+      ${o.status === 'draft' ? `<button class="btn small danger${S.armed === o.id ? ' armed' : ''}" data-act="del" data-id="${o.id}">${S.armed === o.id ? 'למחוק לצמיתות?' : 'מחיקה'}</button>` : ''}
+    </div>`;
+  const inner = `<div><h3>הזמנה ${esc(o.num)} ${pill(o)}</h3>
+      <div class="meta">${o.supplierName ? `ספק: <b>${esc(o.supplierName)}</b> · ` : ''}אספקה ${esc(dmy(o.delivery))} · ${esc(dayName(o.delivery))} · ${(o.lines || []).length} פריטים${o.notes ? ' · יש הערות' : ''}</div></div>
+    <div class="tot">${money(o.total || 0)}</div>`;
+  return buy ? `<button class="order${o.status === 'sent' ? ' fresh' : ''}" data-act="open" data-id="${o.id}">${inner}</button>`
+    : `<div class="order">${inner}${acts}</div>`;
+}
+function renderOrderDetail() {
+  const o = S.orders.find(x => x.id === S.openId);
+  if (!o) { S.openId = null; return renderOrders(); }
+  const buy = S.role === 'buy';
+  const byCat = {}; (o.lines || []).forEach(l => (byCat[l.c] = byCat[l.c] || []).push(l));
+  const rows = Object.entries(byCat).map(([c, ls]) => `<tr class="cat"><td colspan="5">${esc(c)}</td></tr>` + ls.map(l => `<tr>
+      <td>${esc(l.n)}${l.note ? `<span class="line-note">${esc(l.note)}</span>` : ''}</td>
+      <td class="n">${qfmt(l.q)}</td><td>${esc(l.u)}</td>
+      <td class="n">${l.p ? money(l.p) : '—'}</td><td class="n">${l.p ? money(l.p * l.q) : '—'}</td></tr>`).join('')).join('');
+  $('#main').innerHTML = `
+    <div class="row-flex"><button class="btn small" data-act="close">→ חזרה לרשימה</button><span class="spacer"></span>
+      ${buy ? `<button class="btn small" data-act="copyText" data-id="${o.id}">העתקה כטקסט</button><button class="btn small" data-act="xlsx" data-id="${o.id}">ייצוא לאקסל</button>` + (o.status === 'handled' ? `<button class="btn small" data-act="unhandle" data-id="${o.id}">החזרה לפתוחה</button>` : `<button class="btn small" data-act="handle" data-id="${o.id}">סימון כטופלה</button>`)
+        : `${o.status !== 'handled' ? `<button class="btn small" data-act="edit" data-id="${o.id}">עריכה</button>` : ''}<button class="btn small" data-act="copy" data-id="${o.id}">שכפול</button>`}
+    </div>
+    ${buy ? sendBoxHTML(o) : ''}
+    <div id="copyBox"></div>
+    <div class="card" style="display:grid;gap:10px">
+      <h2 class="section-title" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">הזמנה ${esc(o.num)} ${pill(o)}</h2>
+      <div style="font-size:18px;font-weight:700">אספקה: ${esc(dayName(o.delivery))} ${esc(dmy(o.delivery))}${o.supplierName ? ` · ספק: ${esc(o.supplierName)}` : ''}</div>
+      <div class="timeline muted">
+        <span>נוצרה <b>${when(o.createdAt)}</b></span>
+        ${o.sentAt ? `<span>נשלחה <b>${when(o.sentAt)}</b></span>` : ''}
+        ${o.resentAt ? `<span>עודכנה <b>${when(o.resentAt)}</b></span>` : ''}
+        ${o.viewedAt ? `<span>נצפתה ע"י רכש <b>${when(o.viewedAt)}</b></span>` : ''}
+        ${sentList(o).map(s => `<span>נשלחה ל${esc(s.name)} <b>${when(s.at)}</b></span>`).join('')}
+        ${o.handledAt ? `<span>טופלה <b>${when(o.handledAt)}</b></span>` : ''}
+        <span>מחירון <b>${esc(dmy(o.priceDate))}</b></span>
+      </div>
+      ${o.notes ? `<div class="notes-box"><b>הערות:</b> ${esc(o.notes)}</div>` : ''}
+    </div>
+    <div class="card tbl-wrap" style="padding:0"><table>
+      <thead><tr><th>פריט</th><th class="n">כמות</th><th>יחידה</th><th class="n">מחיר</th><th class="n">סה"כ</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="4">סה"כ משוער (${(o.lines || []).length} פריטים)</td><td class="n">${money(o.total || 0)}</td></tr></tfoot>
+    </table></div>`;
+}
+function sendBoxHTML(o) {
+  const list = suppliers();
+  const sup = list.find(s => s.id === (S.supSelFor === o.id ? S.supSel : o.supplierId)) || curSup();
+  const pend = S.waPending && S.waPending.id === o.id ? list.find(s => s.id === S.waPending.sup) : null;
+  if (pend) return `<div class="card row-flex" style="border-color:var(--accent)"><b>שלחתם את ההודעה ל${esc(pend.name)} בוואטסאפ?</b><span class="spacer"></span>
+      <button class="btn primary small" data-act="supplierSent" data-id="${o.id}">כן, לסמן כנשלחה ל${esc(pend.name)}</button><button class="btn small" data-act="waNo">עדיין לא</button></div>`;
+  const already = new Set(sentList(o).map(s => s.name));
+  return `<div class="card" style="display:grid;gap:10px">
+      <div class="row-flex" style="align-items:end">
+        <label class="field" style="flex:1;min-width:160px">שליחה לספק בוואטסאפ<select class="txt" id="supSel">${list.map(s => `<option value="${esc(s.id)}" ${s.id === sup?.id ? 'selected' : ''}>${esc(s.name)}${already.has(s.name) ? ' (נשלח)' : ''}${s.phone ? '' : ' – בלי מספר'}</option>`).join('') || '<option>אין ספקים</option>'}</select></label>
+        <a class="btn primary" href="${esc(waLink(o, sup))}" target="_blank" rel="noopener" data-act="waOpen" data-id="${o.id}" data-sup="${esc(sup?.id || '')}">${sup && already.has(sup.name) ? 'שליחה שוב ל' : 'שליחה ל'}${esc(sup?.name || 'ספק')}</a>
+      </div>
+      <div class="muted" style="font-size:14px">ההזמנה תיפתח בוואטסאפ בלי מחירים, מוכנה לשליחה.${sup && !sup.phone ? ' לספק הזה אין מספר, לכן תבחרו את איש הקשר בוואטסאפ.' : ''}</div>
+    </div>`;
+}
+async function openOrder(id) {
+  S.openId = id; renderMain(); window.scrollTo(0, 0);
+  const o = S.orders.find(x => x.id === id);
+  if (S.role === 'buy' && o && o.status === 'sent') {
+    await write(db => db.doc('orders/' + id).update({ status: 'viewed', viewedAt: new Date().toISOString(), edited: false }));
+  }
+}
+
+/* ---------- export ---------- */
+let xlsxReady = null;
+function loadXlsx() {
+  if (!xlsxReady) xlsxReady = loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js').then(() => window.XLSX);
+  return xlsxReady;
+}
+function orderRows(o) {
+  const rows = [
+    [`הזמנה ${o.num}`], [`אספקה: ${dayName(o.delivery)} ${dmy(o.delivery)}`], ...(o.supplierName ? [[`ספק: ${o.supplierName}`]] : []), [`סטטוס: ${STATUS[o.status] || o.status}`, '', `מחירון: ${dmy(o.priceDate)}`],
+  ];
+  if (o.notes) rows.push([`הערות: ${o.notes}`]);
+  rows.push([], ['קטגוריה', 'פריט', 'כמות', 'יחידה', 'מחיר ליחידה', 'סה"כ', 'הערה']);
+  for (const l of o.lines || []) rows.push([l.c, l.n, l.q, l.u, l.p || '', l.p ? Math.round(l.p * l.q * 100) / 100 : '', l.note || '']);
+  rows.push([], ['', 'סה"כ משוער', '', '', '', o.total || 0]);
+  return rows;
+}
+function sheetOf(XLSX, rows, widths) {
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = widths.map(w => ({ wch: w }));
+  return ws;
+}
+async function exportOrders(orders, filename) {
+  if (!orders.length) return;
+  let XLSX, dl;
+  try { [XLSX, dl] = await Promise.all([loadXlsx(), window.claude?.use ? window.claude.use('downloads') : null]); } catch (e) { toast('טעינת רכיב האקסל נכשלה. נסו שוב'); return; }
+  if (!dl) { toast('הורדת קבצים לא זמינה בתצוגה הזו. פתחו את הדף ב-claude.ai'); return; }
+  const wb = XLSX.utils.book_new();
+  wb.Workbook = { Views: [{ RTL: true }] };
+  const W = [18, 32, 8, 8, 12, 12, 26];
+  if (orders.length > 1) {
+    const agg = {};
+    for (const o of orders) for (const l of o.lines || []) {
+      const k = l.c + '|' + l.n + '|' + l.u;
+      const a = agg[k] = agg[k] || { c: l.c, n: l.n, u: l.u, p: l.p, q: 0, from: [] };
+      a.q += l.q; a.from.push(o.num);
+    }
+    const rows = [[`סיכום מאוחד · ${orders.length} הזמנות`], [], ['קטגוריה', 'פריט', 'כמות', 'יחידה', 'מחיר ליחידה', 'סה"כ', 'מהזמנות']];
+    let total = 0;
+    for (const a of Object.values(agg).sort((x, y) => x.c.localeCompare(y.c, 'he') || x.n.localeCompare(y.n, 'he'))) {
+      const t = a.p ? Math.round(a.p * a.q * 100) / 100 : ''; total += t || 0;
+      rows.push([a.c, a.n, Math.round(a.q * 100) / 100, a.u, a.p || '', t, [...new Set(a.from)].join(', ')]);
+    }
+    rows.push([], ['', 'סה"כ משוער', '', '', '', Math.round(total * 100) / 100]);
+    XLSX.utils.book_append_sheet(wb, sheetOf(XLSX, rows, W), 'סיכום מאוחד');
+  }
+  const used = {};
+  for (const o of orders) {
+    let name = String(`${o.num} ${dmy(o.delivery).replace(/\//g, '.')}`).slice(0, 28);
+    if (used[name]) name = name.slice(0, 25) + ' ' + (++used[name]); else used[name] = 1;
+    XLSX.utils.book_append_sheet(wb, sheetOf(XLSX, orderRows(o), W), name);
+  }
+  const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  try { await dl.save({ filename, data }); toast('הקובץ נשמר'); }
+  catch (e) { if (e?.code !== 'declined') toast(e?.code === 'rate_limited' ? 'יש כבר חלון שמירה פתוח' : 'השמירה לא הצליחה'); }
+}
+function orderText(o) {
+  const byCat = {}; (o.lines || []).forEach(l => (byCat[l.c] = byCat[l.c] || []).push(l));
+  let t = `הזמנה ${o.num}\nאספקה: ${dayName(o.delivery)} ${dmy(o.delivery)}\n`;
+  for (const [c, ls] of Object.entries(byCat)) {
+    t += `\n*${c}*\n` + ls.map(l => `• ${l.n} – ${qfmt(l.q)} ${l.u}${l.note ? ` (${l.note})` : ''}`).join('\n') + '\n';
+  }
+  if (o.notes) t += `\nהערות: ${o.notes}\n`;
+  return t.trim();
+}
+function copyOrderText(o) {
+  const text = orderText(o);
+  const fallback = () => {
+    const box = $('#copyBox'); if (!box) return;
+    box.innerHTML = `<div class="card" style="display:grid;gap:8px"><b>ההעתקה האוטומטית חסומה כאן. סמנו את הטקסט והעתיקו ידנית:</b><textarea class="txt" id="copyTa" rows="10" readonly>${esc(text)}</textarea></div>`;
+    const ta = $('#copyTa'); ta.focus(); ta.select();
+  };
+  try { navigator.clipboard.writeText(text).then(() => toast('ההזמנה הועתקה. אפשר להדביק בוואטסאפ או במייל'), fallback); }
+  catch (e) { fallback(); }
+}
+
+/* ---------- price list ---------- */
+function renderPrices() {
+  const buy = S.role === 'buy'; const p = curCat(); const sup = plSup(); const sn = supName(sup) || 'ספק';
+  const up = S.upload;
+  let html = `<div class="card row-flex"><label class="field" style="min-width:200px;flex:1">מחירון של<select class="txt" id="plSupSel">${suppliers().map(s => `<option value="${esc(s.id)}" ${s.id === sup ? 'selected' : ''}>${esc(s.name)}${S.catalogs[s.id] ? ` (${S.catalogs[s.id].items.length} מוצרים)` : ' (אין מוצרים)'}</option>`).join('')}</select></label></div>`;
+  if (buy) html += up ? uploadPreviewHTML(up) : `<div class="card" style="display:grid;gap:10px">
+      <div class="section-title">עדכון מחירון ל${esc(sn)}</div>
+      <label class="drop" id="drop"><input type="file" id="pdfIn" accept="application/pdf,.pdf,.xlsx,.xls,.csv" hidden>
+        <b>בחירת קובץ: PDF או אקסל</b><span class="muted">או גרירה לכאן. באקסל צריכות להיות עמודות "פריט" ו"מחיר" (ואפשר גם "יחידה" ו"קטגוריה"). המחירים מתעדכנים אצל כולם מיד אחרי האישור.</span>
+        <span class="btn primary">בחירת קובץ</span></label>
+      <div class="err" id="upErr"></div></div>`;
+  html += `<div class="card" style="display:grid;gap:10px">
+      <div class="row-flex"><div class="section-title">מחירון ${esc(sn)} ${p?.date ? esc(dmy(p.date)) : ''}</div><span class="spacer"></span>
+      ${p ? `<span class="muted">${p.items.length} פריטים${p.uploadedAt ? ` · עודכן ${when(p.uploadedAt)}` : ''}${p.prevDate ? ` · ▲▼ שינוי מול ${esc(dmy(p.prevDate))}` : ''}</span>` : ''}</div>
+      ${p ? `<input class="txt" id="plq" type="search" placeholder="חיפוש במחירון" value="${esc(S.plSearch)}" autocomplete="off">` : ''}
+    </div>
+    <div class="list tbl-wrap" id="pltable"></div>`;
+  $('#main').innerHTML = html;
+  renderPriceTable();
+}
+function renderPriceTable() {
+  const box = $('#pltable'); if (!box) return;
+  const p = curCat(); const sn = supName(plSup());
+  if (!p) { box.innerHTML = `<div class="empty">${S.pricesLoaded || S.dbState === 'none' ? (S.role === 'buy' ? `לספק ${esc(sn)} עוד אין מוצרים. העלו קובץ מחירון למעלה.` : `לספק ${esc(sn)} עוד אין מוצרים במערכת.`) : 'טוען…'}</div>`; return; }
+  const q = norm(S.plSearch.trim());
+  const items = p.items.filter(it => !q || norm(it.n).includes(q) || norm(it.c).includes(q));
+  let last = null, rows = '';
+  for (const it of items) {
+    if (it.c !== last) { rows += `<tr class="cat"><td colspan="3">${esc(it.c)}</td></tr>`; last = it.c; }
+    rows += `<tr><td>${esc(it.n)}</td><td>${esc(it.u)}</td><td class="n">${it.p > 0 ? money(it.p) : it.p === 0 ? '<span class="na">אין</span>' : '<span class="na">—</span>'}${chgHTML(it)}${it.pp != null && it.pp !== it.p ? ` <small class="muted">(${it.pp})</small>` : ''}</td></tr>`;
+  }
+  box.innerHTML = `<table><thead><tr><th>פריט</th><th>יחידה</th><th class="n">מחיר</th></tr></thead><tbody>${rows || '<tr><td colspan="3" class="empty">לא נמצא</td></tr>'}</tbody></table>`;
+}
+// the list as it will look after publishing: 'replace' keeps only the file's items, 'merge' updates prices and adds new items
+function buildFinal(up) {
+  const old = curCat()?.items || [];
+  const byName = {}; old.forEach(i => byName[norm(i.n)] = i);
+  const fileItems = up.items.map(i => { const o = byName[norm(i.n)]; return { n: i.n, c: i.c || o?.c || 'כללי', p: i.p, u: i.u || o?.u || guessUnit(i.n, i.c) }; });
+  if (up.mode === 'replace') return fileItems;
+  const fileByName = {}; fileItems.forEach(i => fileByName[norm(i.n)] = i);
+  const merged = old.map(o => { const f = fileByName[norm(o.n)]; return f ? { ...o, p: f.p, u: f.u || o.u } : { n: o.n, c: o.c, p: o.p, u: o.u }; });
+  const have = new Set(old.map(o => norm(o.n)));
+  return merged.concat(fileItems.filter(i => !have.has(norm(i.n))));
+}
+function diffLists(oldItems, newItems) {
+  const om = {}; (oldItems || []).forEach(i => om[norm(i.n)] = i);
+  const nm = {}; newItems.forEach(i => nm[norm(i.n)] = i);
+  const changed = [], added = [];
+  for (const i of newItems) { const o = om[norm(i.n)]; if (!o) added.push(i); else if (o.p !== i.p) changed.push({ ...i, old: o.p }); }
+  const removed = (oldItems || []).filter(i => !nm[norm(i.n)]);
+  return { changed, added, removed };
+}
+function uploadPreviewHTML(up) {
+  const final = buildFinal(up); const has = !!curCat();
+  const d = diffLists(curCat()?.items, final);
+  const ups = d.changed.filter(c => c.p > c.old).length, downs = d.changed.length - ups;
+  const rows = d.changed.map(c => `<tr><td>${esc(c.n)}</td><td class="n">${c.old ?? '—'}</td><td class="n"><b>${c.p ?? '—'}</b> <span class="chg ${c.p > c.old ? 'up' : 'down'}">${c.p > c.old ? '▲' : '▼'}</span></td></tr>`).join('');
+  return `<div class="card" style="display:grid;gap:12px">
+    <div class="section-title">בדיקה לפני עדכון המחירון של ${esc(supName(plSup()))}</div>
+    <div class="muted">${esc(up.fileName)} · ${up.items.length} שורות נקראו מהקובץ</div>
+    ${has ? `<div class="row-flex"><span style="font-weight:700">מוצרים שלא מופיעים בקובץ:</span><div class="seg">
+      <button data-act="upMode" data-mode="merge" aria-pressed="${up.mode === 'merge'}">להשאיר</button>
+      <button data-act="upMode" data-mode="replace" aria-pressed="${up.mode === 'replace'}">להסיר מהמחירון</button></div></div>` : ''}
+    <div class="stats"><span class="stat">אחרי העדכון <b>${final.length}</b> מוצרים</span>${has ? `<span class="stat">התייקרו <b>${ups}</b></span><span class="stat">הוזלו <b>${downs}</b></span><span class="stat">חדשים <b>${d.added.length}</b></span><span class="stat">יוסרו <b>${d.removed.length}</b></span>` : ''}</div>
+    <label class="field" style="max-width:240px">תאריך המחירון<input class="txt" type="date" id="upDate" value="${esc(up.date || todayISO())}"></label>
+    ${rows ? `<div class="tbl-wrap"><table><thead><tr><th>פריט ששינה מחיר</th><th class="n">היה</th><th class="n">עכשיו</th></tr></thead><tbody>${rows}</tbody></table></div>` : ''}
+    ${d.added.length ? `<div class="muted"><b>חדשים:</b> ${d.added.slice(0, 30).map(i => esc(i.n)).join(' · ')}${d.added.length > 30 ? ' …' : ''}</div>` : ''}
+    ${d.removed.length ? `<div class="muted"><b>יוסרו:</b> ${d.removed.slice(0, 30).map(i => esc(i.n)).join(' · ')}${d.removed.length > 30 ? ' …' : ''}</div>` : ''}
+    <div class="row-flex"><button class="btn primary" data-act="publishPl">עדכון המחירון</button><button class="btn" data-act="cancelUp">ביטול</button></div>
+  </div>`;
+}
+let pdfjsReady = null;
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+function loadPdfJs() {
+  if (!pdfjsReady) pdfjsReady = (async () => {
+    const base = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+    await loadScript(base + 'pdf.min.js');
+    await loadScript(base + 'pdf.worker.min.js'); // runs the parser on the page thread
+    return window.pdfjsLib;
+  })();
+  return pdfjsReady;
+}
+async function handleFile(file) {
+  const err = $('#upErr'); if (err) err.textContent = 'קורא את הקובץ…';
+  const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+  try {
+    const r = isPdf ? await readPdf(file) : await readSheet(file);
+    if (!r.items.length) throw new Error('empty');
+    S.upload = { fileName: file.name, date: r.date, items: r.items, mode: isPdf ? 'replace' : 'merge' };
+    renderMain();
+  } catch (e) {
+    const el = $('#upErr'); if (el) el.textContent = isPdf
+      ? 'לא הצלחתי לקרוא מחירים מה-PDF. ייתכן שהמבנה שלו שונה מהמחירון של פיני. נסו קובץ אקסל עם עמודות "פריט" ו"מחיר".'
+      : 'לא הצלחתי לקרוא את האקסל. ודאו שיש עמודה "פריט" (או "מוצר") ועמודה "מחיר".';
+  }
+}
+async function readPdf(file) {
+  const pdfjs = await loadPdfJs();
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const items = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const tc = await (await doc.getPage(p)).getTextContent();
+    for (const i of tc.items) items.push({ s: i.str, x: i.transform[4], y: i.transform[5] - (p - 1) * 2000, w: i.width });
+  }
+  const r = parsePriceItems(items);
+  if (r.items.length < 5) throw new Error('few');
+  return r;
+}
+function sheetItems(rows) {
+  const find = (row, re) => row.findIndex(c => re.test(String(c).trim()));
+  let h = -1, cN = 0, cP = 1, cU = -1, cC = -1;
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const n = find(rows[i], /פריט|מוצר|^שם|תאור|תיאור/), p = find(rows[i], /מחיר/);
+    if (n >= 0 && p >= 0) { h = i; cN = n; cP = p; cU = find(rows[i], /יחיד|^יח/); cC = find(rows[i], /קטגור|סוג|מחלק/); break; }
+  }
+  const num = v => { const m = String(v).replace(/,/g, '').match(/\d+(\.\d+)?/); return m ? parseFloat(m[0]) : null; };
+  const items = [];
+  for (const row of rows.slice(h + 1)) {
+    const n = String(row[cN] ?? '').trim(); if (!n || /^סה"?כ/.test(n)) continue;
+    items.push({ n, c: cC >= 0 ? String(row[cC] ?? '').trim() : '', p: num(row[cP]), u: cU >= 0 ? String(row[cU] ?? '').trim() : '' });
+  }
+  if (h < 0 && !items.some(i => i.p != null)) throw new Error('no columns');
+  return items;
+}
+async function readSheet(file) {
+  const XLSX = await loadXlsx();
+  const wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array' });
+  return { date: todayISO(), items: sheetItems(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' })) };
+}
+async function publishPriceList() {
+  const up = S.upload; if (!up) return;
+  const sup = plSup(); const cur = curCat();
+  const date = $('#upDate')?.value || up.date || todayISO();
+  const om = {}; (cur?.items || []).forEach(i => om[norm(i.n)] = i);
+  const items = buildFinal(up).map(i => { const o = om[norm(i.n)]; const it = { n: i.n, c: i.c, p: i.p ?? null, u: i.u }; if (o && o.p !== i.p && o.p != null) it.pp = o.p; return it; });
+  const body = { supplier: sup, date, items, fileName: up.fileName, uploadedAt: new Date().toISOString(), prevDate: cur?.date && cur.date !== date ? cur.date : (cur?.prevDate || null) };
+  const ok = await write(async db => { await db.doc('catalog/' + sup).set(body); await db.doc(`catalog/${sup}/history/${date}`).set(body); }, `המחירון של ${supName(sup)} עודכן`);
+  if (ok) { S.upload = null; renderMain(); }
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act],[data-tab],[data-cat],[data-role],[data-filter]'); if (!t) return;
+  if (t.dataset.role) { S.pickRole = t.dataset.role; document.querySelectorAll('.role').forEach(b => b.setAttribute('aria-pressed', b === t)); $('#pw')?.focus(); return; }
+  if (t.dataset.tab) { S.tab = t.dataset.tab; S.openId = null; S.armed = null; document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b === t)); renderMain(); return; }
+  if (t.dataset.cat) { S.cat = t.dataset.cat; renderList(); return; }
+  if (t.dataset.filter) { S.buyFilter = t.dataset.filter; renderOrders(); return; }
+  const a = t.dataset.act, k = t.dataset.k, id = t.dataset.id;
+  if (a !== 'del') S.armed = null;
+  const step = 1;
+  switch (a) {
+    case 'logout': window.appLogout?.(); store.set('mz_role', null); S.role = null; S.tab = null; S.openId = null; render(); break;
+    case 'inc': setQty(k, (S.cart.lines[k]?.q || 0) + step); break;
+    case 'dec': setQty(k, (S.cart.lines[k]?.q || 0) - step); break;
+    case 'review': S.view = 'review'; renderMain(); window.scrollTo(0, 0); break;
+    case 'back': S.view = 'list'; renderMain(); break;
+    case 'clear': S.cart = emptyCart(); saveCart(); render(); toast('ההזמנה נוקתה'); break;
+    case 'rm': if (k.startsWith('x:')) S.cart.extra = S.cart.extra.filter(x => 'x:' + x.id !== k); else delete S.cart.lines[k]; saveCart(); renderReview(); renderHeader(); break;
+    case 'saveDraft': submitOrder(true); break;
+    case 'send': submitOrder(false); break;
+    case 'newOrder': S.tab = 'new'; S.view = 'list'; render(); break;
+    case 'open': openOrder(id); break;
+    case 'close': S.openId = null; renderMain(); break;
+    case 'edit': { const o = S.orders.find(x => x.id === id); if (o) loadOrderToCart(o, false); break; }
+    case 'copy': { const o = S.orders.find(x => x.id === id); if (o) loadOrderToCart(o, true); break; }
+    case 'del':
+      if (S.armed !== id) { S.armed = id; renderOrders(); break; }
+      S.armed = null; write(db => db.doc('orders/' + id).delete(), 'הטיוטה נמחקה'); break;
+    case 'handle': write(db => db.doc('orders/' + id).update({ status: 'handled', handledAt: new Date().toISOString() }), 'סומנה כטופלה'); break;
+    case 'unhandle': write(db => db.doc('orders/' + id).update({ status: 'viewed', handledAt: null }), 'הוחזרה לפתוחות'); break;
+    case 'xlsx': { const o = S.orders.find(x => x.id === id); if (o) exportOrders([o], `הזמנה ${o.num} אספקה ${dmy(o.delivery).replace(/\//g, '-')}.xlsx`); break; }
+    case 'xlsxAll': {
+      const list = (S.listShown || []).map(i => S.orders.find(o => o.id === i)).filter(Boolean);
+      exportOrders(list, `הזמנות ${{ open: 'פתוחות', done: 'שטופלו', all: 'כל' }[S.buyFilter]} ${dmy(todayISO()).replace(/\//g, '-')}.xlsx`); break;
+    }
+    case 'waOpen': S.waPending = { id, sup: t.dataset.sup }; setTimeout(() => renderMain(), 300); break;
+    case 'waNo': S.waPending = null; renderMain(); break;
+    case 'supplierSent': {
+      const o = S.orders.find(x => x.id === id); const sup = suppliers().find(s => s.id === S.waPending?.sup);
+      S.waPending = null; if (!o) break;
+      const now = new Date().toISOString(); const name = sup?.name || 'ספק';
+      write(db => db.doc('orders/' + id).update({ sentTo: [...sentList(o), { name, at: now }], status: 'handled', handledAt: o.handledAt || now }), `סומנה כנשלחה ל${name}`); break;
+    }
+    case 'editSupplier': S.editSupplier = id; renderMain(); break;
+    case 'cancelSupplier': S.editSupplier = false; renderMain(); break;
+    case 'delSupplier':
+      if (S.armed !== 'sup:' + id) { S.armed = 'sup:' + id; renderMain(); break; }
+      S.armed = null; saveSuppliers(suppliers().filter(s => s.id !== id), 'הספק נמחק'); break;
+    case 'copyText': { const o = S.orders.find(x => x.id === id); if (o) copyOrderText(o); break; }
+    case 'publishPl': publishPriceList(); break;
+    case 'cancelUp': S.upload = null; renderMain(); break;
+    case 'upMode': if (S.upload) { S.upload.mode = t.dataset.mode; renderMain(); } break;
+    case 'supSwitchYes': S.cart = { ...emptyCart(), id: S.cart.id, delivery: S.cart.delivery, notes: S.cart.notes, sup: S.pendingSup }; S.pendingSup = null; S.cat = 'הכל'; saveCart(); render(); break;
+    case 'supSwitchNo': S.pendingSup = null; $('#supSwitch').innerHTML = ''; break;
+  }
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.qty !== undefined) { setQty(t.dataset.qty, String(t.value).replace(',', '.'), true); return; }
+  if (t.id === 'q') { S.search = t.value; renderList(); return; }
+  if (t.id === 'plq') { S.plSearch = t.value; renderPriceTable(); return; }
+  if (t.id === 'orderNotes') { S.cart.notes = t.value; saveCart(); return; }
+  if (t.dataset.note !== undefined) { const l = lineRef(t.dataset.note); if (l) { l.note = t.value; saveCart(); } return; }
+  if (t.dataset.rq !== undefined) { const l = lineRef(t.dataset.rq); const v = +String(t.value).replace(',', '.'); if (l && v > 0) { l.q = v; saveCart(); renderBar(); } return; }
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.id === 'delivery') { S.cart.delivery = t.value; saveCart(); const d = $('#deliveryDay'); if (d) d.textContent = dayName(t.value); }
+  if (t.dataset.unit !== undefined) { const l = lineRef(t.dataset.unit); if (l) { l.u = t.value; saveCart(); } }
+  if (t.dataset.rq !== undefined) renderReview();
+  if (t.id === 'pdfIn' && t.files[0]) handleFile(t.files[0]);
+  if (t.id === 'supSel') { S.supSel = t.value; S.supSelFor = S.openId; store.set('mz_sup', t.value); renderMain(); }
+  if (t.id === 'cartSup') {
+    if (t.value === S.cart.sup) return;
+    if (Object.keys(S.cart.lines).length) { S.pendingSup = t.value; t.value = S.cart.sup; $('#supSwitch').innerHTML = supSwitchHTML(); return; }
+    S.cart.sup = t.value; S.cat = 'הכל'; saveCart(); renderHeader(); renderList(); renderBar();
+  }
+  if (t.id === 'plSupSel') { S.plSup = t.value; S.upload = null; S.plSearch = ''; renderHeader(); renderMain(); }
+});
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  if (e.target.id === 'loginForm') {
+    const pw = $('#pw').value.trim();
+    const enter = () => { S.role = S.pickRole || 'mz'; store.set('mz_role', S.role); S.tab = null; render(); };
+    if (window.appLogin) { // standalone app: the server checks the password
+      $('#pwErr').textContent = 'בודק…';
+      window.appLogin(pw).then(ok => {
+        if (ok === true) return enter();
+        $('#pwErr').textContent = ok === 'locked' ? 'יותר מדי ניסיונות שגויים. נסו שוב בעוד 15 דקות' : ok === 'offline' ? 'אין חיבור לשרת. בדקו את האינטרנט ונסו שוב' : 'הסיסמה שגויה. נסו שוב';
+      });
+      return;
+    }
+    if (pw !== PASS) { $('#pwErr').textContent = 'הסיסמה שגויה. נסו שוב'; return; }
+    enter(); return;
+  }
+  if (e.target.id === 'supplierForm') {
+    const id = e.target.dataset.id;
+    const body = { name: $('#supName').value.trim(), phone: $('#supPhone').value.trim() };
+    if (!body.name) return;
+    if (body.phone && waNumber(body.phone).length < 11) { toast('מספר הוואטסאפ לא תקין. כתבו מספר נייד מלא, למשל 050-1234567'); return; }
+    const list = suppliers().map(s => ({ ...s }));
+    if (id === 'new') list.push({ id: 's' + Date.now().toString(36), ...body });
+    else { const s = list.find(x => x.id === id); if (s) Object.assign(s, body); }
+    saveSuppliers(list, `${body.name} נשמר`);
+    return;
+  }
+  if (e.target.id === 'extraForm') {
+    const n = $('#exN').value.trim(), q = +$('#exQ').value.replace(',', '.');
+    if (!n || !(q > 0)) return;
+    S.cart.extra.push({ id: Math.random().toString(36).slice(2, 8), n, q, u: $('#exU').value, note: '' }); saveCart();
+    $('#exN').value = ''; $('#exQ').value = ''; renderBar(); renderHeader(); toast(`${n} נוסף להזמנה`);
+  }
+});
+['dragover', 'dragleave', 'drop'].forEach(ev => document.addEventListener(ev, e => {
+  const d = e.target.closest?.('#drop'); if (!d) return;
+  e.preventDefault(); d.classList.toggle('over', ev === 'dragover');
+  if (ev === 'drop' && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+}));
+window.addEventListener('resize', () => renderHeader());
+window.appSignedOut = () => { store.set('mz_role', null); S.role = null; S.tab = null; render(); toast('צריך להיכנס שוב'); };
+
+render();
+connect();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
