@@ -1,5 +1,5 @@
-// גרסה cc1756f3cc. קוד האפליקציה מהמטמון כדי שתיפתח מהר; בכל פתיחה נבדקת גרסה חדשה ברשת.
-const SHELL = 'shell-cc1756f3cc';
+// גרסה 9cd3b4a2d8. קוד האפליקציה מהמטמון כדי שתיפתח מהר; בכל פתיחה נבדקת גרסה חדשה ברשת.
+const SHELL = 'shell-9cd3b4a2d8';
 const FILES = ['./', 'index.html', 'remote.js', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 self.addEventListener('install', ev => ev.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', ev => ev.waitUntil(caches.keys()
